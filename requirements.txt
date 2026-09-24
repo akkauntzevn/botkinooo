@@ -1,0 +1,10 @@
+aiogram==3.13.1
+SQLAlchemy==2.0.35
+aiosqlite==0.20.0
+asyncpg==0.29.0
+python-dotenv==1.0.1
+
+# Only needed for userbot/monitor.py (competitor-channel monitoring):
+pyrogram==2.0.106
+tgcrypto==1.2.5
+#1003960372964 
