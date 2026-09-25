@@ -251,6 +251,56 @@ async def auto_add_movie_from_baza(message: Message, db: Database, bot: Bot):
             f"🔎 <b>Kino kodi:</b> <code>{next_code}</code>\n\n"
             f"🤖 <b>Botimiz:</b> @{bot_info.username}"
         )
+
+        import asyncio
+from aiogram import Bot
+from aiogram.types import Message
+from aiogram.filters import Command
+from aiogram.exceptions import TelegramRetryAfter
+from database import db  # Baza yo'li to'g'riligini tekshiring
+
+@router.message(Command("reklama"), IsAdmin())
+async def send_broadcast(message: Message, bot: Bot):
+    if not message.reply_to_message:
+        await message.answer("❌ Yuborilishi kerak bo'lgan xabarga (rasm/video) javob (reply) qilib /reklama deb yozing.")
+        return
+
+    users = await db.get_all_user_ids()
+    total = len(users)
+
+    if total == 0:
+        await message.answer("❌ Bazada foydalanuvchilar yo'q.")
+        return
+
+    status = await message.answer(f"⏳ **Reklama tarqatilmoqda...**\nJami: {total} kishi.")
+    success, failed = 0, 0
+
+    for user_id in users:
+        try:
+            await bot.copy_message(
+                chat_id=user_id,
+                from_chat_id=message.chat.id,
+                message_id=message.reply_to_message.message_id
+            )
+            success += 1
+            await asyncio.sleep(0.05)  # Spamdan himoya
+        except TelegramRetryAfter as e:
+            await asyncio.sleep(e.retry_after)
+            await bot.copy_message(
+                chat_id=user_id,
+                from_chat_id=message.chat.id,
+                message_id=message.reply_to_message.message_id
+            )
+            success += 1
+        except Exception:
+            failed += 1
+
+    await status.edit_text(
+        f"✅ **Tarqatish yakunlandi!**\n\n"
+        f"📊 Jami: {total} ta\n"
+        f"🟢 Muvaffaqiyatli: {success} ta\n"
+        f"🔴 Botni bloklaganlar: {failed} ta"
+    )
         
         await message.copy_to(chat_id=message.chat.id, caption=new_text, parse_mode="HTML")
         await message.delete()
