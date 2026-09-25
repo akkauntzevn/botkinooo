@@ -11,7 +11,7 @@ from middlewares.throttling import ThrottlingMiddleware
 from middlewares.user_tracking import UserTrackingMiddleware
 from handlers import user as user_handlers
 from handlers import admin as admin_handlers
-from handlers import zayavka as zayavka_handlers  # <-- Zayavka fayli ulandi
+
 
 logging.basicConfig(
     level=logging.INFO,
