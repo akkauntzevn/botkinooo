@@ -245,6 +245,11 @@ class Database:
 
             row = (await conn.execute(select(func.count()).select_from(users))).first()
             return row[0] if row else 0
+    async def get_all_user_ids(self) -> Sequence[int]:
+        """Barcha foydalanuvchilarning Telegram ID raqamlarini ro'yxat qilib qaytaradi (Broadcast uchun)"""
+        async with self.engine.connect() as conn:
+            rows = (await conn.execute(select(users.c.tg_id))).all()
+            return [row[0] for row in rows]
 
 
 db = Database()
