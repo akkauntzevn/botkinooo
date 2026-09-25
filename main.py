@@ -41,8 +41,7 @@ async def main() -> None:
     # Routerlarni ulash
     dp.include_router(admin_handlers.router)
     dp.include_router(user_handlers.router)
-    dp.include_router(zayavka_handlers.router)  # <-- Zayavka routeri faollashtirildi
-
+   
     try:
         logger.info("Bot ishga tushdi (polling)...")
         await bot.delete_webhook(drop_pending_updates=True)
