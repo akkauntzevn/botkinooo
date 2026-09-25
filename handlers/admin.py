@@ -4,6 +4,7 @@ import re
 from aiogram import Router, Bot, F
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.exceptions import TelegramRetryAfter
 
 from database import Database
 from filters.admin import IsAdmin
@@ -181,45 +182,36 @@ async def del_sponsor(message: Message, command: CommandObject, bot: Bot, db: Da
 
     ok = await db.remove_sponsor(target_id)
     await message.reply("✅ Homiy kanal o'chirildi." if ok else "❌ Bu kanal homiylar ro'yxatida yo'q.")
-    # ================= AVTOMATIK KANAL BAZASI =================
 
-import asyncio
+
+# ================= AVTOMATIK KANAL BAZASI =================
 
 baza_lock = asyncio.Lock()
 
-# O'z Baza kanalingiz ID raqamini shu yerga yozasiz (hozircha qanday topishni pastda o'rgataman)
+# O'z Baza kanalingiz ID raqamini shu yerga yozasiz
 BAZA_KANAL_ID = -1003960372964 
 
-# 1. Kanal ID sini topish uchun yordamchi (Faqat bir marta ishlatamiz)
 @router.channel_post(F.text.lower() == "id")
 async def get_my_channel_id(message: Message):
     await message.edit_text(f"Bu kanalning ID raqami:\n\n<code>{message.chat.id}</code>", parse_mode="HTML")
 
-# 2. Baza kanalga tashlangan videolarni 100% avtomat kodlash (hech qanday heshtegsiz!)
-# 2. Baza kanalga tashlangan videolarni 100% avtomat kodlash (hech qanday heshtegsiz!)
-@router.channel_post(F.chat.id == BAZA_KANAL_ID, F.video | F.document | F.animation)
-# 2. Baza kanalga tashlangan videolarni 100% avtomat kodlash (Aqlli tozalash bilan)
 @router.channel_post(F.chat.id == BAZA_KANAL_ID, F.video | F.document | F.animation)
 async def auto_add_movie_from_baza(message: Message, db: Database, bot: Bot):
-    import re
     async with baza_lock: 
         raw_caption = message.caption or ""
         
         # ------ AQLLI TOZALASH TIZIMI ------
         title = "Nomsiz kino"
         
-        # 1-qadam: Agar eski matnda "Nomi: Isyonkor 3" degan joyi bo'lsa, faqat shuni kesib oladi
         match = re.search(r'(?:Nomi|nomi|Kino|kino):\s*([^\n]+)', raw_caption)
         if match:
             title = match.group(1).strip()
         else:
-            # 2-qadam: Agar topolmasa, matndagi @, http, bot, kodi degan aralashmalari yo'q eng birinchi toza qatorni oladi
             lines = [line.strip() for line in raw_caption.split('\n') if line.strip()]
             clean_lines = [line for line in lines if not any(x in line.lower() for x in ['@', 'http', 'bot', 'kodi', 'ko\'rish', 'kanal'])]
             if clean_lines:
                 title = clean_lines[0]
                 
-        # Ortiqcha emojilarni va ortiqcha probellarni tozalaymiz
         title = title.replace("🎬", "").replace("🔎", "").replace("🎞", "").strip()
         if len(title) > 60:
             title = title[:60] + "..."
@@ -251,16 +243,16 @@ async def auto_add_movie_from_baza(message: Message, db: Database, bot: Bot):
             f"🔎 <b>Kino kodi:</b> <code>{next_code}</code>\n\n"
             f"🤖 <b>Botimiz:</b> @{bot_info.username}"
         )
+        
+        await message.copy_to(chat_id=message.chat.id, caption=new_text, parse_mode="HTML")
+        await message.delete()
+        await asyncio.sleep(0.5)
 
-        import asyncio
-from aiogram import Bot
-from aiogram.types import Message
-from aiogram.filters import Command
-from aiogram.exceptions import TelegramRetryAfter
-from database import db  # Baza yo'li to'g'riligini tekshiring
+
+# ================= REKLAMA TARQATISH =================
 
 @router.message(Command("reklama"), IsAdmin())
-async def send_broadcast(message: Message, bot: Bot):
+async def send_broadcast(message: Message, bot: Bot, db: Database):
     if not message.reply_to_message:
         await message.answer("❌ Yuborilishi kerak bo'lgan xabarga (rasm/video) javob (reply) qilib /reklama deb yozing.")
         return
@@ -301,8 +293,3 @@ async def send_broadcast(message: Message, bot: Bot):
         f"🟢 Muvaffaqiyatli: {success} ta\n"
         f"🔴 Botni bloklaganlar: {failed} ta"
     )
-        
-        await message.copy_to(chat_id=message.chat.id, caption=new_text, parse_mode="HTML")
-        await message.delete()
-        
-        await asyncio.sleep(0.5)
